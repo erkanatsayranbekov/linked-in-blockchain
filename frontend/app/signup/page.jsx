@@ -1,23 +1,46 @@
 "use client"
-import React, { useEffect, useState } from 'react'
-import { useWriteContract , useReadContract , useAccount, cookieStorage } from 'wagmi'
-import { NFTStorage, File } from 'nft.storage'
-import {abi}  from './abi'
+import React, { useEffect, useState, useRef  } from 'react';
+import { useWriteContract , useReadContract , useAccount, cookieStorage } from 'wagmi';
+import metadata  from '../../artifacts/contracts/LinkedIn.sol/ProfessionalNetworking.json';
 import { ImSpinner } from "react-icons/im";
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
+
 
 export default function Page() {
-  const NFT_STORAGE_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDQ4QTNDN0I4MTU0MDQwMjdBODlFMDc2NzA2MjI3YkM4RmZFYzk3NTMiLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTcwOTA1OTUyMTAyOSwibmFtZSI6ImJsb2NrIn0.xWOUlhbw7EyjgLVpMIxaz5A7GCMM52_w0lE0IkseSQQ'
-  const client = new NFTStorage({ token: NFT_STORAGE_TOKEN })
   const { writeContract, isSuccess } = useWriteContract()
-  const [file, setFile] = useState()
+  const [file, setFile] = useState("");
+  const [isLoading, setIsLoading] = useState(false)
+  const inputFile = useRef(null);
+  const router = useRouter();
   const [ formData, setFormData ] = useState({
     username: '',
     biography: '',
     avatar: '',
   });
 
-  const router = useRouter();
+  const uploadFile = async (fileToUpload) => {
+    try {
+      setIsLoading(true);
+      const data = new FormData();
+      data.set("file", fileToUpload);
+      const res = await fetch("/api/files", {
+        method: "POST",
+        body: data,
+      });
+      const resData = await res.json();
+      setFormData((prevFormData) => ({ ...prevFormData, avatar: `https://lime-genuine-planarian-53.mypinata.cloud/ipfs/${resData.IpfsHash}` }))
+      setIsLoading(false);
+    } catch (e) {
+      console.log(e);
+      setIsLoading(false);
+      alert("Trouble uploading file");
+    }
+  };
+
+  const handleChange = (e) => {
+    setFile(e.target.files[0]);
+    uploadFile(e.target.files[0]);
+  };
 
   useEffect(() => {
     if (isSuccess) {
@@ -26,15 +49,12 @@ export default function Page() {
   })
 
   const account = useAccount();
-  const {data}= useReadContract({
-    abi: abi,
+  const { data }= useReadContract({
+    abi: metadata.abi,
     address: '0xb7787A07564a7100A4a0F8236D99C81596bE5381',
     functionName: 'profiles',
     args: [account.address],
   })
-
-
-  const [isLoading, setIsLoading] = useState(false)
 
   async function handleInputChange(event) {
     const { name, value } = event.target
@@ -43,10 +63,11 @@ export default function Page() {
   
   async function uploadNFT(event) {
     event.preventDefault()
+    console.log(formData)
     if (formData.avatar != ''){
       writeContract({
-        abi,
-        address: '0xfF49EDFaaEC8927E48c07D45D2d001Cf27952138',
+        metadata.abi,
+        address: '0x1218FC41e50F137527Dabb8ff54e1D03d2B57133',
         functionName: "signUp",
         args: [
           formData.username,
@@ -59,18 +80,6 @@ export default function Page() {
     }
   }
   
-  async function handleFileChange(event) {
-    setIsLoading(true)
-    setFile(event.target.files[0])
-    const imageFile = new File([file], 'nft.png', { type: 'image/png' })
-    const metadata = await client.store({
-      name: formData.username,
-      description: formData.biography,
-      image: imageFile
-    })
-    setFormData((prevFormData) => ({ ...prevFormData, avatar: metadata.data.image.href }))
-    setIsLoading(false)
-  }
 
   return (
 <section className="bg-gray-50 dark:bg-gray-900">
@@ -100,7 +109,7 @@ export default function Page() {
                     )
                       :
                       (
-                      <input type="file" name="avatar" id="avatar" className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required="" onChange={handleFileChange}/>
+                      <input type="file"  name="avatar" id="avatar" className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" ref={inputFile} onChange={handleChange} />
                       )
                   }
               </div>

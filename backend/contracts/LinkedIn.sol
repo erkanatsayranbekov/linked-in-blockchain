@@ -35,6 +35,15 @@ contract ProfessionalNetworking is Ownable {
     constructor(address _topWeb3NFTAddress, address _owner) Ownable(_owner) {
         topWeb3NFT = ERC721(_topWeb3NFTAddress);
     }
+    
+    function isUserRegistered(address _user) external view returns (bool) {
+        for (uint256 i = 0; i < registeredUsers.length; i++) {
+            if (registeredUsers[i] == _user) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     function signUp(string memory _name, string memory _bio, string memory _profilePicture) external {
         require(bytes(_name).length > 0, "Name must not be empty");
@@ -42,7 +51,17 @@ contract ProfessionalNetworking is Ownable {
         require(bytes(_profilePicture).length > 0, "Profile picture must not be empty");
 
         profiles[msg.sender] = UserProfile(_name, _bio, _profilePicture, new address[](0), false);
-        registeredUsers.push(msg.sender);
+        bool userExists = false;
+        for(uint i = 0; i < registeredUsers.length; i++) {
+            if (registeredUsers[i] == msg.sender) {
+                userExists = true;
+                break;
+            }
+        }
+        
+        if (!userExists) {
+            registeredUsers.push(msg.sender);
+        }
     }
 
     function sendFriendRequest(address _to) external {
@@ -94,16 +113,20 @@ contract ProfessionalNetworking is Ownable {
         return profiles[msg.sender].friends;
     }
 
-    function getAllRegisteredUsers() external view returns (address[] memory) {
-        return registeredUsers;
-    }
+    function getAllRegisteredUsers() external view returns (address[] memory, string[] memory, string[] memory, string[] memory) {
+        address[] memory addresses = new address[](registeredUsers.length);
+        string[] memory names = new string[](registeredUsers.length);
+        string[] memory bios = new string[](registeredUsers.length);
+        string[] memory avatars = new string[](registeredUsers.length);
 
-    function isUserRegistered(address _user) external view returns (bool) {
         for (uint256 i = 0; i < registeredUsers.length; i++) {
-            if (registeredUsers[i] == _user) {
-                return true;
-            }
+            address userAddress = registeredUsers[i];
+            addresses[i] = userAddress;
+            names[i] = profiles[userAddress].name;
+            bios[i] = profiles[userAddress].bio;
+            avatars[i] = profiles[userAddress].profilePicture;
         }
-        return false;
+
+        return (addresses, names, bios, avatars);
     }
 }

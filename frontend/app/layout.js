@@ -3,8 +3,8 @@ import { headers } from 'next/headers'
 
 import { cookieToInitialState } from 'wagmi'
 
-import { config } from '@/app/config'
-import { ContextProvider } from '@/app/context'
+import { config } from './config'
+import { ContextProvider } from './context'
 import Navbar from './components/navbar'
 import Sidebar from './components/sidebar'
 
