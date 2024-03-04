@@ -7,7 +7,7 @@ const Sidebar = () => {
     const account = useAccount()
     const {data} = useReadContract({
         abi: metadata.abi,
-        address: '0x1218FC41e50F137527Dabb8ff54e1D03d2B57133',
+        address: '0x1DAC27Cb4F6F9a8D3382d42DBF07109eB08f411F',
         functionName: 'isUserRegistered',
         args: [account?.address],
     })

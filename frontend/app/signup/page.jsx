@@ -8,13 +8,13 @@ import { useRouter } from 'next/navigation';
 
 export default function Page() {
   const { writeContract, isSuccess } = useWriteContract()
-  const [file, setFile] = useState("");
   const [isLoading, setIsLoading] = useState(false)
   const inputFile = useRef(null);
   const router = useRouter();
   const [ formData, setFormData ] = useState({
     username: '',
     biography: '',
+    major: '',
     avatar: '',
   });
 
@@ -38,7 +38,6 @@ export default function Page() {
   };
 
   const handleChange = (e) => {
-    setFile(e.target.files[0]);
     uploadFile(e.target.files[0]);
   };
 
@@ -51,7 +50,7 @@ export default function Page() {
   const account = useAccount();
   const { data }= useReadContract({
     abi: metadata.abi,
-    address: '0xb7787A07564a7100A4a0F8236D99C81596bE5381',
+    address: '0x1DAC27Cb4F6F9a8D3382d42DBF07109eB08f411F',
     functionName: 'profiles',
     args: [account.address],
   })
@@ -66,17 +65,16 @@ export default function Page() {
     console.log(formData)
     if (formData.avatar != ''){
       writeContract({
-        metadata.abi,
-        address: '0x1218FC41e50F137527Dabb8ff54e1D03d2B57133',
+        abi:metadata.abi,
+        address: '0x1DAC27Cb4F6F9a8D3382d42DBF07109eB08f411F',
         functionName: "signUp",
         args: [
           formData.username,
           formData.biography,
+          formData.major,
           formData.avatar,
         ],
       })
-    } else {
-
     }
   }
   
@@ -100,6 +98,10 @@ export default function Page() {
               <div>
                   <label htmlFor="biography" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Biography</label>
                   <textarea name="biography" rows="4" id="biography" placeholder="Write something about yourself" className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 resize-none" required="" onChange={(e) => handleInputChange(e)}></textarea>
+              </div>
+              <div>
+                  <label htmlFor="major" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Major</label>
+                  <input type="text" name="major" id="major" className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Major" required="" onChange={(e) => handleInputChange(e)}/>
               </div>
               <div>
                   <label htmlFor="avatar" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Avatar</label>

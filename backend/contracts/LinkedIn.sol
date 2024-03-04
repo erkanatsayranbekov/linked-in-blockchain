@@ -5,11 +5,11 @@ import "../node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import "./TopWeb3.sol";
 
-
 contract ProfessionalNetworking is Ownable {
     struct UserProfile {
         string name;
         string bio;
+        string major;
         string profilePicture;
         address[] friends;
         bool hasTopWeb3NFT;
@@ -21,7 +21,8 @@ contract ProfessionalNetworking is Ownable {
     }
 
     mapping(address => UserProfile) public profiles;
-    mapping(address => mapping(address => bool)) public friendRequests;
+    mapping(address => mapping(address => bool)) public friendRequestsReceived;
+    mapping(address => mapping(address => bool)) public friendRequestsSent; // New mapping for sent friend requests
     mapping(address => uint256) public numFriends;
     address[] public registeredUsers;
     Post[] public posts;
@@ -35,7 +36,7 @@ contract ProfessionalNetworking is Ownable {
     constructor(address _topWeb3NFTAddress, address _owner) Ownable(_owner) {
         topWeb3NFT = ERC721(_topWeb3NFTAddress);
     }
-    
+
     function isUserRegistered(address _user) external view returns (bool) {
         for (uint256 i = 0; i < registeredUsers.length; i++) {
             if (registeredUsers[i] == _user) {
@@ -45,12 +46,12 @@ contract ProfessionalNetworking is Ownable {
         return false;
     }
 
-    function signUp(string memory _name, string memory _bio, string memory _profilePicture) external {
+    function signUp(string memory _name, string memory _bio, string memory _major, string memory _profilePicture) external {
         require(bytes(_name).length > 0, "Name must not be empty");
         require(bytes(_bio).length > 0, "Bio must not be empty");
         require(bytes(_profilePicture).length > 0, "Profile picture must not be empty");
 
-        profiles[msg.sender] = UserProfile(_name, _bio, _profilePicture, new address[](0), false);
+        profiles[msg.sender] = UserProfile(_name, _bio, _major, _profilePicture, new address[](0), false);
         bool userExists = false;
         for(uint i = 0; i < registeredUsers.length; i++) {
             if (registeredUsers[i] == msg.sender) {
@@ -67,13 +68,16 @@ contract ProfessionalNetworking is Ownable {
     function sendFriendRequest(address _to) external {
         require(msg.sender != _to, "Cannot send friend request to yourself");
         require(profiles[msg.sender].friends.length < 5, "User already has 5 or more friends");
+        require(!friendRequestsSent[msg.sender][_to], "Friend request already sent to this user"); // Check if request has already been sent
 
-        friendRequests[msg.sender][_to] = true;
+        friendRequestsSent[msg.sender][_to] = true; // Mark the request as sent
+        friendRequestsReceived[_to][msg.sender] = true; // Mark the request as received
         emit FriendRequestSent(msg.sender, _to);
     }
 
+
     function acceptFriendRequest(address _from) external {
-        require(friendRequests[_from][msg.sender], "No friend request from this user");
+        require(friendRequestsReceived[msg.sender][_from], "No friend request from this user");
         require(profiles[msg.sender].friends.length < 5, "User already has 5 or more friends");
 
         profiles[msg.sender].friends.push(_from);
@@ -81,7 +85,8 @@ contract ProfessionalNetworking is Ownable {
         numFriends[msg.sender]++;
         numFriends[_from]++;
 
-        delete friendRequests[_from][msg.sender];
+        delete friendRequestsReceived[msg.sender][_from]; // Delete the received request
+        delete friendRequestsSent[_from][msg.sender]; // Delete the sent request
 
         emit FriendRequestAccepted(_from, msg.sender);
 
@@ -90,6 +95,7 @@ contract ProfessionalNetworking is Ownable {
             profiles[msg.sender].hasTopWeb3NFT = true;
         }
     }
+
 
     function createPost(string memory _content) external {
         require(profiles[msg.sender].hasTopWeb3NFT, "User does not have TOPWEB3 NFT");
@@ -113,10 +119,32 @@ contract ProfessionalNetworking is Ownable {
         return profiles[msg.sender].friends;
     }
 
-    function getAllRegisteredUsers() external view returns (address[] memory, string[] memory, string[] memory, string[] memory) {
+    function getFriendRequestsReceived() external view returns (address[] memory) {
+        uint256 numRequests = 0;
+        for (uint256 i = 0; i < registeredUsers.length; i++) {
+            address sender = registeredUsers[i];
+            if (friendRequestsReceived[msg.sender][sender]) {
+                numRequests++;
+            }
+        }
+        address[] memory requestSenders = new address[](numRequests);
+        uint256 index = 0;
+        for (uint256 i = 0; i < registeredUsers.length; i++) {
+            address sender = registeredUsers[i];
+            if (friendRequestsReceived[msg.sender][sender]) {
+                requestSenders[index] = sender;
+                index++;
+            }
+        }
+        return requestSenders;
+    }
+
+
+    function getAllRegisteredUsers() external view returns (address[] memory, string[] memory, string[] memory, string[] memory, string[] memory) {
         address[] memory addresses = new address[](registeredUsers.length);
         string[] memory names = new string[](registeredUsers.length);
         string[] memory bios = new string[](registeredUsers.length);
+        string[] memory majors = new string[](registeredUsers.length);
         string[] memory avatars = new string[](registeredUsers.length);
 
         for (uint256 i = 0; i < registeredUsers.length; i++) {
@@ -124,9 +152,10 @@ contract ProfessionalNetworking is Ownable {
             addresses[i] = userAddress;
             names[i] = profiles[userAddress].name;
             bios[i] = profiles[userAddress].bio;
+            majors[i] = profiles[userAddress].major;
             avatars[i] = profiles[userAddress].profilePicture;
         }
 
-        return (addresses, names, bios, avatars);
+        return (addresses, names, bios, majors, avatars);
     }
 }
