@@ -13,6 +13,8 @@ contract ProfessionalNetworking is Ownable {
         string profilePicture;
         address[] friends;
         bool hasTopWeb3NFT;
+        address[] incomingFriendRequests; 
+        address[] outgoingFriendRequests;
     }
 
     struct Post {
@@ -22,7 +24,7 @@ contract ProfessionalNetworking is Ownable {
 
     mapping(address => UserProfile) public profiles;
     mapping(address => mapping(address => bool)) public friendRequestsReceived;
-    mapping(address => mapping(address => bool)) public friendRequestsSent; // New mapping for sent friend requests
+    mapping(address => mapping(address => bool)) public friendRequestsSent;
     mapping(address => uint256) public numFriends;
     address[] public registeredUsers;
     Post[] public posts;
@@ -51,7 +53,7 @@ contract ProfessionalNetworking is Ownable {
         require(bytes(_bio).length > 0, "Bio must not be empty");
         require(bytes(_profilePicture).length > 0, "Profile picture must not be empty");
 
-        profiles[msg.sender] = UserProfile(_name, _bio, _major, _profilePicture, new address[](0), false);
+        profiles[msg.sender] = UserProfile(_name, _bio, _major, _profilePicture, new address[](0), false, new address[](0), new address[](0));
         bool userExists = false;
         for(uint i = 0; i < registeredUsers.length; i++) {
             if (registeredUsers[i] == msg.sender) {
@@ -71,13 +73,14 @@ contract ProfessionalNetworking is Ownable {
         require(!friendRequestsSent[msg.sender][_to], "Friend request already sent to this user"); // Check if request has already been sent
 
         friendRequestsSent[msg.sender][_to] = true; // Mark the request as sent
-        friendRequestsReceived[_to][msg.sender] = true; // Mark the request as received
+        profiles[msg.sender].outgoingFriendRequests.push(_to); // Add recipient to sender's outgoing requests
+        profiles[_to].incomingFriendRequests.push(msg.sender); // Add sender to recipient's incoming requests
+
         emit FriendRequestSent(msg.sender, _to);
     }
 
 
     function acceptFriendRequest(address _from) external {
-        require(friendRequestsReceived[msg.sender][_from], "No friend request from this user");
         require(profiles[msg.sender].friends.length < 5, "User already has 5 or more friends");
 
         profiles[msg.sender].friends.push(_from);
@@ -85,14 +88,24 @@ contract ProfessionalNetworking is Ownable {
         numFriends[msg.sender]++;
         numFriends[_from]++;
 
-        delete friendRequestsReceived[msg.sender][_from]; // Delete the received request
-        delete friendRequestsSent[_from][msg.sender]; // Delete the sent request
+        removeRequest(profiles[msg.sender].incomingFriendRequests, _from);
+        removeRequest(profiles[_from].outgoingFriendRequests, msg.sender);
 
         emit FriendRequestAccepted(_from, msg.sender);
 
-        if (numFriends[msg.sender] == 3 && !profiles[msg.sender].hasTopWeb3NFT) {
-            TOPWEB3NFT(msg.sender).mint(msg.sender, 0); 
+        if (profiles[msg.sender].friends.length == 3) {
             profiles[msg.sender].hasTopWeb3NFT = true;
+        }
+    }
+
+
+    function removeRequest(address[] storage requests, address _request) private {
+        for (uint256 i = 0; i < requests.length; i++) {
+            if (requests[i] == _request) {
+                requests[i] = requests[requests.length - 1];
+                requests.pop();
+                return;
+            }
         }
     }
 
@@ -119,26 +132,13 @@ contract ProfessionalNetworking is Ownable {
         return profiles[msg.sender].friends;
     }
 
-    function getFriendRequestsReceived() external view returns (address[] memory) {
-        uint256 numRequests = 0;
-        for (uint256 i = 0; i < registeredUsers.length; i++) {
-            address sender = registeredUsers[i];
-            if (friendRequestsReceived[msg.sender][sender]) {
-                numRequests++;
-            }
-        }
-        address[] memory requestSenders = new address[](numRequests);
-        uint256 index = 0;
-        for (uint256 i = 0; i < registeredUsers.length; i++) {
-            address sender = registeredUsers[i];
-            if (friendRequestsReceived[msg.sender][sender]) {
-                requestSenders[index] = sender;
-                index++;
-            }
-        }
-        return requestSenders;
+    function getFriendRequestsIn() external view returns (address[] memory) {
+        return profiles[msg.sender].incomingFriendRequests;
     }
 
+    function getFriendRequestsOut() external view returns (address[] memory) {
+        return profiles[msg.sender].outgoingFriendRequests;
+    }
 
     function getAllRegisteredUsers() external view returns (address[] memory, string[] memory, string[] memory, string[] memory, string[] memory) {
         address[] memory addresses = new address[](registeredUsers.length);
@@ -146,6 +146,8 @@ contract ProfessionalNetworking is Ownable {
         string[] memory bios = new string[](registeredUsers.length);
         string[] memory majors = new string[](registeredUsers.length);
         string[] memory avatars = new string[](registeredUsers.length);
+        address[][] memory friendsIn = new address[][](5);
+        address[][] memory friendsOut = new address[][](5);
 
         for (uint256 i = 0; i < registeredUsers.length; i++) {
             address userAddress = registeredUsers[i];
@@ -154,8 +156,48 @@ contract ProfessionalNetworking is Ownable {
             bios[i] = profiles[userAddress].bio;
             majors[i] = profiles[userAddress].major;
             avatars[i] = profiles[userAddress].profilePicture;
+            friendsIn[i] = profiles[userAddress].incomingFriendRequests;
+            friendsOut[i] = profiles[userAddress].outgoingFriendRequests;
         }
 
         return (addresses, names, bios, majors, avatars);
     }
+
+    function getUserData(address _userAddress) external view returns (
+        string memory name,
+        string memory bio,
+        string memory major,
+        string memory profilePicture,
+        address[] memory friends,
+        address[] memory incomingFriendRequests,
+        address[] memory outgoingFriendRequests,
+        bool hasTopWeb3NFT
+    ) {
+        UserProfile memory user = profiles[_userAddress];
+        return (
+            user.name,
+            user.bio,
+            user.major,
+            user.profilePicture,
+            user.friends,
+            user.incomingFriendRequests,
+            user.outgoingFriendRequests,
+            user.hasTopWeb3NFT
+        );
+    }
+
+    function getAllPosts() external view returns (address[] memory authors, string[] memory contents) {
+        uint256 numPosts = posts.length;
+        address[] memory _authors = new address[](numPosts);
+        string[] memory _contents = new string[](numPosts);
+
+        for (uint256 i = 0; i < numPosts; i++) {
+            _authors[i] = posts[i].author;
+            _contents[i] = posts[i].content;
+        }
+
+        return (_authors, _contents);
+    }
+
+
 }

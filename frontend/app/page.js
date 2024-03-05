@@ -8,7 +8,7 @@ export default function Home() {
   const [empty, setEmpty] = useState(true);
   const { data } = useReadContract({
     abi: metadata.abi,
-    address: '0x1DAC27Cb4F6F9a8D3382d42DBF07109eB08f411F',
+    address: '0x7DdBD7470A8415545382B4111811b5F4d51F1159',
     functionName: 'getAllRegisteredUsers',
   });
 
@@ -51,10 +51,6 @@ export default function Home() {
                   <img className="w-24 h-24 mb-3 rounded-full shadow-lg" src={user.avatar}/>
                   <a href={user.address}><h5 className="mb-1 text-xl font-medium text-gray-900 dark:text-white">{user.name}</h5></a>
                   <span className="text-sm text-gray-500 dark:text-gray-400">{user.major}</span>
-                  <div className="flex mt-4 md:mt-6">
-                      <a href="#" className="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Add friend</a>
-                      <a href="#" className="py-2 px-4 ms-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Message</a>
-                  </div>
               </div>
           </div>
           ))

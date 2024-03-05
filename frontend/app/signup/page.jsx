@@ -50,7 +50,7 @@ export default function Page() {
   const account = useAccount();
   const { data }= useReadContract({
     abi: metadata.abi,
-    address: '0x1DAC27Cb4F6F9a8D3382d42DBF07109eB08f411F',
+    address: '0x7DdBD7470A8415545382B4111811b5F4d51F1159',
     functionName: 'profiles',
     args: [account.address],
   })
@@ -66,7 +66,7 @@ export default function Page() {
     if (formData.avatar != ''){
       writeContract({
         abi:metadata.abi,
-        address: '0x1DAC27Cb4F6F9a8D3382d42DBF07109eB08f411F',
+        address: '0x7DdBD7470A8415545382B4111811b5F4d51F1159',
         functionName: "signUp",
         args: [
           formData.username,
